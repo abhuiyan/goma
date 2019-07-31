@@ -1330,10 +1330,16 @@ assemble_energy(double time,	/* present time value */
 
   dbl *grad_T = fv->grad_T;
 
+  dbl beta, temp, k, uigijuj, tau_, tau_deriv, gijgij;
+  double G[DIM][DIM];
+
+
   double vconv[MAX_PDIM]; /*Calculated convection velocity */
   double vconv_old[MAX_PDIM]; /*Calculated convection velocity at previous time*/
   CONVECTION_VELOCITY_DEPENDENCE_STRUCT d_vconv_struct;
   CONVECTION_VELOCITY_DEPENDENCE_STRUCT *d_vconv = &d_vconv_struct;
+
+
 
   /* density derivatives */
   DENSITY_DEPENDENCE_STRUCT d_rho_struct;  /* density dependence */
@@ -1426,11 +1432,12 @@ assemble_energy(double time,	/* present time value */
   rho = density(d_rho, time);
 
   /* CHECK FOR REMOVAL */
-  conductivity( d_k, time );
+  k = conductivity( d_k, time );
 
   Cp = heat_capacity( d_Cp, time );
 
   h = heat_source( d_h, time, tt, dt );
+
 
   if (pd->TimeIntegration != STEADY) {
     T_dot = fv_dot->T;
@@ -1454,6 +1461,49 @@ assemble_energy(double time,	/* present time value */
       err = get_convection_velocity_rs(vconv, vconv_old, d_vconv, dt, tt);
       EH(err, "Error in calculating effective convection velocity_rs");
     }
+
+
+  /* tau_ calculation from Shakib et. al */
+
+   beta=2/sqrt(15);
+
+   /*calculation of G (gij) */
+   for(j=0; j<dim; j++)
+     {
+       for(p=0; p<dim; p++)
+         {
+           temp = 0;
+           for(a=0; a<dim; a++)
+             {
+               temp += bf[eqn]->B[a][j] * bf[eqn]->B[a][p];
+             }
+           G[j][p] = temp;
+         /* printf("G[%d][%d] = %g\n", j, p, G[j][p]);*/
+         }
+     }
+
+   /*calculation of gijgij (G:G)*/
+   gijgij=0;
+   for (p=0; p<dim; p++){
+       for (a=0; a<dim; a++){
+          gijgij += G[p][a] * G[p][a];
+         }
+     }
+
+   /* calculation of uigijuj */
+   uigijuj = 0;
+   for (p=0; p<dim; p++){
+       for (a=0; a<dim; a++){
+           uigijuj += vconv[p] * G[p][a] * vconv[a];
+         }
+     }
+
+
+
+   /* tau from Shakib et. al */
+  tau_ = (beta)/sqrt(((rho * 1 * rho * 1 * uigijuj) + (9 * 1e-5 * 1e-5 * gijgij)));
+
+
 
 
   /*
@@ -1494,12 +1544,14 @@ assemble_energy(double time,	/* present time value */
 
 	  /* only use Petrov Galerkin on advective term - if required */
 	  wt_func = bf[eqn]->phi[i];
+
+
 	  /* add Petrov-Galerkin terms as necessary */
 	  if(supg!=0.)
 	    {
 	      for(p=0; p<dim; p++)
 		{
-		  wt_func += supg * h_elem_inv * vconv[p] * bf[eqn]->grad_phi[i][p];
+		  wt_func += supg * tau_ * vconv[p] * bf[eqn]->grad_phi[i][p];
 		}
 	    }
 
@@ -1577,7 +1629,7 @@ assemble_energy(double time,	/* present time value */
 	    {
 	      for(p=0; p<dim; p++)
 		{
-		  wt_func += supg * h_elem_inv * vconv[p] * bf[eqn]->grad_phi[i][p];
+		  wt_func += supg * tau_ * vconv[p] * bf[eqn]->grad_phi[i][p];
 		}
 	    }
 
@@ -1724,6 +1776,21 @@ assemble_energy(double time,	/* present time value */
 			  advection_a *= pd->etm[eqn][(LOG2_ADVECTION)];
 			  if(supg!=0.)
 			    {
+			      temp = 0;
+			      for (p=0; p<dim; p++){
+				  for (a=0; a<dim; a++){
+				    temp += delta(b,p) * d_vconv->v[b][b][j] * G[p][a] * vconv[a]+
+					delta(b,a) * d_vconv->v[b][b][j] * vconv[p] * G[p][a];
+				    }
+				}
+			      tau_deriv = -0.5 * tau_ * tau_ * tau_ * (1/beta) * (1/beta) * rho * rho * 1 * 1 * temp;
+
+			    }
+
+
+
+			  if(supg!=0.)
+			    {
 			      h_elem_deriv = 0.;
 			      if(hsquared[b] != 0.)
 				{
@@ -1736,8 +1803,17 @@ assemble_energy(double time,	/* present time value */
 			  advection_b = 0.;
 			  if(supg!=0.)
 			    {
-			      d_wt_func = supg * h_elem_inv * d_vconv->v[b][b][j] * grad_phi_i[b]
-				+ supg * h_elem_inv_deriv * vconv[b] * grad_phi_i[b];
+			       /*d_wt_func_old = supg * h_elem_inv * d_vconv->v[b][b][j] * grad_phi_i[b]
+				+ supg * h_elem_inv_deriv * vconv[b] * grad_phi_i[b];*/
+			      temp = 0;
+			      for(p=0;p<dim;p++)
+				{
+				  temp +=  vconv[p] * grad_phi_i[p];
+				}
+
+
+			      d_wt_func = supg * tau_ * d_vconv->v[b][b][j] * grad_phi_i[b]
+					+ supg * tau_deriv * temp;
 
 			      for(p=0;p<dim;p++)
 				{
@@ -35168,8 +35244,7 @@ assemble_emwave(double time,	/* present time value */
 	  if ( xfem != NULL )
             {
 	      int xfem_active, extended_dof, base_interp, base_dof;
-	      xfem_dof_state( i, pd->i[eqn], ei->ielem_shape,
-                              &xfem_active, &extended_dof, &base_interp, &base_dof );
+			      &xfem_active, &extended_dof, &base_interp, &base_dof;
 	      if ( extended_dof && !xfem_active ) continue;
             }
 	  phi_i = bf[eqn]->phi[i];
@@ -35266,7 +35341,8 @@ assemble_emwave(double time,	/* present time value */
 	/*
 	 *  Conjugate pressure variable
 	 */
-	  var = conj_var;
+	  /*var = conj_var;*/
+	  var = em_conjvar;
 	  if ( pd->v[var] )
 	    {
 	      pvar = upd->vp[var];
@@ -35291,7 +35367,7 @@ assemble_emwave(double time,	/* present time value */
 
 	          for ( p=0; p<VIM; p++)
 		    {
-	             for ( q=0; q<VIM; p++)
+		     for ( q=0; q<VIM; q++)
 		       {
 		         diffusion -= permute(p,q,dir)*bf[eqn]->grad_phi[i][p]*grad_phi_j[q];
 		       }

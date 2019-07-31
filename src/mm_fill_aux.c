@@ -1014,7 +1014,7 @@ h_elem_siz(dbl hsquared[DIM], dbl hh[DIM][DIM],
     }
   }
   
-  if (dim == 2) {
+  if (dim == 2 && (elem_shape == QUADRILATERAL)) {
     /*
      * Calculate the midpoint positions on each of the faces
      */
@@ -1046,7 +1046,36 @@ h_elem_siz(dbl hsquared[DIM], dbl hh[DIM][DIM],
 	dhh_dxnode[1][3] = -0.5;
       }
     }
-  } else if (dim == 3 && (elem_shape == SHELL)) {
+  } else if (dim == 2 && (elem_shape == TRIANGLE)) {
+
+ for (p = 0; p < dim; p++) {
+   p1[p] = fabs((xnode[p][0] - xnode[p][1]));
+   p2[p] = fabs((xnode[p][1] - xnode[p][2]));
+   p3[p] = fabs((xnode[p][2] - xnode[p][0]));
+ }
+
+hsquared[0] = p1[0] * p1[0] + p1[1] * p1[1];
+hsquared[1] = p2[0] * p2[0] + p2[1] * p2[1];
+hsquared[2] = p3[0] * p3[0] + p3[1] * p3[1];
+
+hsquared[0] = (hsquared[0]+ hsquared[1] + hsquared[2])/3;
+hsquared[1] = hsquared[0];
+if (af->Assemble_Jacobian) {
+  memset((void *)dhh_dxnode, 0, dim*MDE*sizeof(double));
+  if (DeformingMesh) {
+    dhh_dxnode[0][0] = -0.5;
+    dhh_dxnode[0][1] =  0.5;
+    dhh_dxnode[0][2] =  0.5;
+    dhh_dxnode[0][3] = -0.5;
+
+    dhh_dxnode[1][0] =  0.5;
+    dhh_dxnode[1][1] =  0.5;
+    dhh_dxnode[1][2] = -0.5;
+    dhh_dxnode[1][3] = -0.5;
+  }
+}
+
+  }else if (dim == 3 && (elem_shape == SHELL)) {
 
      /*Special Case */
     /*
@@ -1414,7 +1443,7 @@ surface_determinant_and_normal(
           /*
           T[0][0] = -Ref; T[0][1] = Ref;
           */
-          T[0][0] = -1.; T[0][1] = 1.;
+          T[0][0] = -1.; T[0][1] = 1.;  
         }
       else if ( id_side == 2 )
         {

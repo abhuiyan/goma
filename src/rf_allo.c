@@ -492,7 +492,8 @@ alloc_int_1_FL(const int nvalues, const int val, const char *filename,
    *        program, with the error indicated by returning the NULL pointer.
    ***************************************************************************/
 {
-  int i, bytenum, nval1 = nvalues;
+  int i, nval1 = nvalues;
+  size_t bytenum;
   int *array;
   if (nval1 <= 0) {
     nval1 = 1;

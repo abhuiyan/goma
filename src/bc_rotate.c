@@ -279,6 +279,7 @@ apply_rotated_bc (
        * Loop over the number of local element nodes on this side 
        * and rotate the equations
        */
+
       for (i = 0; i < (int) elem_side_bc->num_nodes_on_side; i++) {
 	
 	/* Find the local element node number for the current node */

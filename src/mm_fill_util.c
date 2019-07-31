@@ -153,6 +153,8 @@ beer_belly(void)
   struct Basis_Functions *MapBf;
   size_t v_length;
   dbl f, g, sum;
+  dbl dgij[DIM][DIM][DIM][MDE];
+  dbl dgijgij[DIM][DIM][DIM][MDE];
   static int is_initialized = FALSE;
   static int elem_blk_id_save = -123;
   
@@ -488,6 +490,54 @@ beer_belly(void)
 		    + MapBf-> J[0][0]       * g;
 		} 
 	    }
+
+	  /*Mesh derivatives for SUPG tau from Shakib et. al */
+	  /*
+	   * Derivatives of entries of the gij and gijgij
+	   * matrix with respect to each degree of freedom for
+	   * each component of mesh displacement.
+	   */
+
+
+  /*          for (k = 0; k <pdim; k++)
+              {
+                for (n = 0; n < mdof; n++)
+                  {
+                    dgij[0][0][k][n] = (MapBf->B[0][0] * MapBf->dB[0][0][k][n]) + (MapBf->B[0][0] * MapBf->dB[0][0][k][n]);
+                    dgij[0][1][k][n] = (MapBf->B[1][0] * MapBf->dB[0][1][k][n]) + (MapBf->B[0][1] * MapBf->dB[1][0][k][n]);
+                    dgij[1][0][k][n] = (MapBf->B[0][1] * MapBf->dB[1][0][k][n]) + (MapBf->B[1][0] * MapBf->dB[0][1][k][n]);
+                    dgij[1][1][k][n] = (MapBf->B[1][1] * MapBf->dB[1][1][k][n]) + (MapBf->B[1][1] * MapBf->dB[1][1][k][n]);
+
+                    dgijgij[0][0][k][n] = 2 * MapBf->B[0][0] * MapBf->B[0][0] * dgij[0][0][k][n];
+                    dgijgij[0][1][k][n] = 2 * MapBf->B[1][0] * MapBf->B[0][1] * dgij[0][1][k][n];
+                    dgijgij[1][0][k][n] = 2 * MapBf->B[0][1] * MapBf->B[1][0] * dgij[1][0][k][n];
+                    dgijgij[1][1][k][n] = 2 * MapBf->B[1][1] * MapBf->B[1][1] * dgij[1][1][k][n];
+
+                  }
+              } */
+
+            /*
+             * Derivatives of tau
+             * with respect to each degree of freedom for
+             * each component of mesh displacement.
+             */
+  /*          for (k = 0; k <pdim; k++)
+              {
+                for (n = 0; n < mdof; n++)
+                  {
+                    for (i = 0; i <dim; i++)
+                      {
+                        for (j = 0; j <dim; j++)
+                          {
+                            tempv = (rho * rho * 1 * 1 * vcnov[i] * dgij[i][j][k][n] * vconv[j]) + (9 * 1e-5 * 1e-5 * 2 * MapBf->B[j][i] * MapBf->[i][j] * dgij[i][j][k][n]);
+                            tau_deriv[k][n] += -0.5 * tau_ * tau_ * tau_ * (1/beta) * (1/beta) * tempv;
+                          }
+                      }
+                  }
+              } */
+
+
+
 	} 
 
       break;
@@ -721,7 +771,7 @@ beer_belly(void)
     }
 
 
-  return(status);
+  return(status);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 }     
 /*****************************************************************************/
 /*****************************************************************************/

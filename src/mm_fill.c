@@ -2786,7 +2786,7 @@ matrix_fill(
        * and we supposedly have the correct contributions by now.
        */
       if (call_rotate) {
-	if  ( Use_2D_Rotation_Vectors == TRUE )
+          if  ( Use_2D_Rotation_Vectors == TRUE )
 	  rotate_eqns_at_node_2D( iconnect_ptr, ielem_dim, num_local_nodes, ams);
 	else if( first_elem_side_BC_array[ielem] != NULL ) {
 	  err = apply_rotated_bc(resid_vector, first_elem_side_BC_array,

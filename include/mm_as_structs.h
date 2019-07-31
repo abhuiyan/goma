@@ -1568,7 +1568,7 @@ struct Field_Variables
   dbl pF[MAX_PHASE_FUNC];       /* phase function */
   dbl sh_J;                     /* Shell surface diffusion flux */
   dbl sh_Kd;                    /* Shell surface curvature */
-  dbl apr, api, ars, sh_bv;			/* Acoustic pressure */
+  dbl apr, api, ars, sh_bv;	/* Acoustic pressure */
   dbl sink_mass;                /* porous sink mass */
 
   dbl external_field[MAX_EXTERNAL_FIELD];           /* External field to be read and held const*/
